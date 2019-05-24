@@ -19,7 +19,7 @@ DOC = ''
 PDFS_PATH = data_path
 COLUMN_QT = 0
 BLOCKS_LIST = []
-with_doc = True
+WITH_DOC = True
 
 def up_update(number, name, real_name):
     global BLOCKS_LIST
@@ -115,7 +115,7 @@ def merge(path, doc):
     fs_with_order = []
     fs_without_order = [path + "\\" + f for f in listdir(path) if search(pattern, f, IGNORECASE) and not search(r'merged_file.pdf', f)]
     for f in fs_without_order:
-        fs_order[int(f.split('_')[-2].split('\\')[-1].split('/')[-1])] = f
+        fs_order[int(f.split('\\')[-1].split('/')[-1].split('_')[0])] = f
     if doc:
         for i in range(len(fs_without_order)):
             fs_with_order.append(fs_order[i])
@@ -253,7 +253,7 @@ Label(wd).pack(fill='x') # 用于排版的空标签
 Label(wd).pack(fill='x') # 用于排版的空标签
 
 def mg_them():
-    global PDFS_PATH
+    global PDFS_PATH, WITH_DOC
     pdf_count = 0
     make_bt['state'] = 'disabled'
     for f in listdir(PDFS_PATH): # 把指定文件夹中所有pdf文件复制到data文件夹里
@@ -269,7 +269,6 @@ def mg_them():
                 for u in f.split('_'):
                     new_name.append(u)
                 new = new.join(new_name)
-                print(f'f{f}\nnew{new}') # test
                 rename(f, new)
                 pdfs_list[pdf_count] = new
         for b in BLOCKS_LIST:
@@ -283,17 +282,17 @@ def mg_them():
         full_name = f'{data_path}/{doc_name}'
         doc2pdf(full_name, f'{data_path}/0_{doc_name.split(".")[-2]}.pdf')
     else:
-        with_doc = False
-    merge(data_path, with_doc)
+        WITH_DOC = False
+    merge(data_path, WITH_DOC)
     save_name = filedialog.asksaveasfilename(title='标书另存为', defaultextension='.pdf', initialfile='整合版文档名称', filetypes=[('PDF','*.pdf')])
     new_file_name = save_name.split('/')[-1]
     save_path = save_name.split(new_file_name)[-2]
     copy2(data_path+'merged_file.pdf', save_path)
     chdir(save_path)
     rename('merged_file.pdf', new_file_name)
-    with open(f'目录——{new_file_name}.txt', 'a') as f:
+    with open(f'目录——{new_file_name}.txt', 'a', encoding='UTF-8') as f:
         for i in range(len(BLOCKS_LIST)):
-            f.write(BLOCKS_LIST[i])
+            f.write(BLOCKS_LIST[i].split('block_')[1])
             f.write('\n')
     for f in listdir(data_path):
         if f != 'settings.json':
