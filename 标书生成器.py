@@ -19,6 +19,7 @@ DOC = ''
 PDFS_PATH = data_path
 COLUMN_QT = 0
 BLOCKS_LIST = []
+with_doc = True
 
 def up_update(number, name, real_name):
     global BLOCKS_LIST
@@ -36,24 +37,17 @@ def up_update(number, name, real_name):
 
 def down_update(number, name, real_name):
     global BLOCKS_LIST
-    if number < len(BOLCKS_LIST):
+    if number < len(BLOCKS_LIST):
         for b in BLOCKS_LIST:
-            if b.split('_')[0] == (number+1):
-                globals()[b].name = f"{number}_{b.split('_')[1]}"
+            if b.split('_')[1] == str(number+1):
+                globals()[b].name = f"{number}_{b.split('_')[2]}"
                 globals()[f'dyn_block_{globals()[b].name.split("_")[1]}'].destroy()
                 globals()[b].number -= 1
-                BLOCKS_LIST[globals()[b].number] = globals()[b].name
-                BLOCKS_LIST[globals()[b].number-1] = f"{number+1}_{name.split('_')[1]}"
+                BLOCKS_LIST[globals()[b].number] = f'block_{globals()[b].name}'
+                BLOCKS_LIST[globals()[b].number-1] = f"block_{number+1}_{name.split('_')[1]}"
                 store_name = BLOCKS_LIST[globals()[b].number]
                 BLOCKS_LIST[globals()[b].number] = BLOCKS_LIST[globals()[b].number-1]
                 BLOCKS_LIST[globals()[b].number-1] = store_name
-         
-def make_order(kind, number, real_name):
-    if kind == 'up':
-        pass
-        #globals()[BLOCKS_LIST[number-1]] = Block(f'{BLOCKS_LIST[number-1].split("_")[0]}')
-        #globals()[BLOCKS_LIST[number-1]].pack()
-        #globals()[f"dyn_block_{BLOCKS_LIST[number-1].split('_')[-1]}"].desdroy()
        
 class Block(object):
 
@@ -65,7 +59,7 @@ class Block(object):
         self.number = int(name.split('_')[0])
 
     def display(self, parent):
-        globals()[f'dyn_block_{self.real_name}'] = Frame(parent, width=font_size*2)
+        globals()[f'dyn_block_{self.real_name}'] = Frame(parent)
         globals()[f'dyn_block_{self.real_name}'].pack(side=LEFT)
         def up():
             up_update(self.number, self.name, self.real_name)
@@ -76,39 +70,58 @@ class Block(object):
             globals()[BLOCKS_LIST[self.number-1]].display(globals()[f'bl_{(self.number-1)//10}_{(self.number-1)%10}'])
             globals()[BLOCKS_LIST[self.number]] = Block(BLOCKS_LIST[self.number].split('block_')[1])
             globals()[BLOCKS_LIST[self.number]].display(globals()[f'bl_{(self.number)//10}_{(self.number)%10}'])
+            del BLOCKS_LIST[-1]
+            del BLOCKS_LIST[-1]
 
-        globals()[f'bt1_{self.name}'] = Button(globals()[f'dyn_block_{self.real_name}'], command=up, text=' ↑ ')
+        globals()[f'bt1_{self.name}'] = Button(globals()[f'dyn_block_{self.real_name}'], command=up, text='↑')
         globals()[f'bt1_{self.name}'].pack(side=LEFT)
+        if self.number == 1:
+            globals()[f'bt1_{self.name}']['state'] = 'disabled'
         def down():
-            down_update(self.number, self.name, self.realname)
+            down_update(self.number, self.name, self.real_name)
+            globals()[f'dyn_block_{self.real_name}'].destroy()
             self.number += 1
             self.name = f"{self.number}_{self.name.split('_')[1]}"
-            make_order('down', self.number, self.real_name)
-        globals()[f'bt2_{self.name}'] = Button(globals()[f'dyn_block_{self.real_name}'], command=down, text=' ↓ ')
+            globals()[BLOCKS_LIST[self.number-1]] = Block(BLOCKS_LIST[self.number-1].split('block_')[1])
+            globals()[BLOCKS_LIST[self.number-1]].display(globals()[f'bl_{(self.number-1)//10}_{(self.number-1)%10}'])
+            globals()[BLOCKS_LIST[self.number-2]] = Block(BLOCKS_LIST[self.number-2].split('block_')[1])
+            globals()[BLOCKS_LIST[self.number-2]].display(globals()[f'bl_{(self.number-2)//10}_{(self.number-2)%10}'])
+            del BLOCKS_LIST[-1]
+            del BLOCKS_LIST[-1]
+        globals()[f'bt2_{self.name}'] = Button(globals()[f'dyn_block_{self.real_name}'], command=down, text='↓')
         globals()[f'bt2_{self.name}'].pack(side=LEFT)
+        if self.number == len(BLOCKS_LIST):
+            globals()[f'bt2_{self.name}']['state'] = 'disabled'
         globals()[f'block_num_{self.real_name}'] = StringVar()
         globals()[f'block_num_{self.real_name}'].set(self.number)
         globals()[f'num_lb_{self.real_name}'] = Label(globals()[f'dyn_block_{self.real_name}'], textvariable=globals()[f'block_num_{self.real_name}'])
         globals()[f'num_lb_{self.real_name}'].pack(side=LEFT)
         globals()[f'block_var_{self.real_name}'] = StringVar()
         globals()[f'block_var_{self.real_name}'].set(self.real_name)
-        globals()[self.real_name] = Label(globals()[f'dyn_block_{self.real_name}'], textvariable=globals()[f'block_var_{self.real_name}'], width=int(font_size*1.5))
+        globals()[self.real_name] = Label(globals()[f'dyn_block_{self.real_name}'], textvariable=globals()[f'block_var_{self.real_name}'], font=('Arial', int(font_size/2)), width=int(font_size*0.75))
         globals()[self.real_name].pack(side=RIGHT)
 
-def merge(path):
+def merge(path, doc):
     """
     @author: Yuanyang Shao
     merge pdf files
     """
     # 找到所有pdf并排序
     pattern =r"\.pdf$"
-    fs_order = {}
+    if doc:
+        fs_order = {}
+    else:
+        fs_order = {0: '没有Word文档'}
     fs_with_order = []
     fs_without_order = [path + "\\" + f for f in listdir(path) if search(pattern, f, IGNORECASE) and not search(r'merged_file.pdf', f)]
     for f in fs_without_order:
         fs_order[int(f.split('_')[-2].split('\\')[-1].split('/')[-1])] = f
-    for i in range(len(fs_without_order)):
-        fs_with_order.append(fs_order[i])
+    if doc:
+        for i in range(len(fs_without_order)):
+            fs_with_order.append(fs_order[i])
+    else:
+        for i in range(len(fs_without_order)):
+            fs_with_order.append(fs_order[i+1])
 
     # merge the file
     opened_file = [open(file_name, 'rb') for file_name in fs_with_order]
@@ -167,10 +180,10 @@ def find_word():
     wf = filedialog.askopenfile()
     if wf != None:
         word_location = wf.name
-        word_bt.config(text='更改', bg='blue')
-        word_var.set(word_location)
+        word_var.set(f'已选中word文档：{word_location}')
         DOC = word_location
-word_bt = Button(row1, text='                  选择要转的Word文档（.doc或.docx格式都行）                ', command=find_word, font=('Arial', font_size))
+        word_bt.destroy()
+word_bt = Button(row1, text='                  选择待合并Word文档（.doc或.docx格式都行）                ', command=find_word, font=('Arial', font_size))
 word_bt.pack(side=RIGHT)
 row2 = Frame(info_fr)
 row2.pack(fill='x') # 第二行
@@ -183,8 +196,7 @@ def find_pdfs():
     wf = filedialog.askdirectory()
     if wf != None:
         PDFS_PATH = wf
-        pdf_var.set(wf)
-        pdf_bt.config(text='更改', bg='red')
+        pdf_var.set(f'已选标书pdf所在目录：{wf}')
         for f in listdir(wf):
             if f.split('.')[-1] == 'pdf':
                 pdfs_qt += 1
@@ -201,69 +213,92 @@ def find_pdfs():
         pdfs_quantity.set(f'共选中{pdfs_qt}个pdf文档，点击文件名前的箭头为其排序↓↓↓')
         COLUMN_QT = pdfs_qt//10 + 1
         for c in range(COLUMN_QT):
-            globals()[f'column{c}'] = Frame(row4)
-            globals()[f'column{c}'].pack(side=LEFT)
-            for r in range(10):
-                globals()[f'bl_{c}_{r}'] = Frame(globals()[f'column{c}'])
-                globals()[f'bl_{c}_{r}'].pack()
+            if c < 13:
+                globals()[f'column{c}'] = Frame(row4)
+                globals()[f'column{c}'].pack(side=LEFT)
+                for r in range(10):
+                    globals()[f'bl_{c}_{r}'] = Frame(globals()[f'column{c}'])
+                    globals()[f'bl_{c}_{r}'].pack()
+            else:
+                globals()[f'column{c}'] = Frame(row5)
+                globals()[f'column{c}'].pack(side=LEFT)
+                for r in range(10):
+                    globals()[f'bl_{c}_{r}'] = Frame(globals()[f'column{c}'])
+                    globals()[f'bl_{c}_{r}'].pack()
         for b in BLOCKS_LIST:
             globals()[b].display(globals()[f"bl_{(int(b.split('_')[1])-1)//10}_{(int(b.split('_')[1])-1)%10}"])
+        pdf_bt.destroy()
 pdf_bt = Button(row2, text='选择待合并pdf文档所在目录（请先确保该目录下没有其他pdf文档）', command=find_pdfs, font=('Arial', font_size))
 pdf_bt.pack(side=RIGHT)
 row3 = Frame(info_fr)
+row3.pack(fill='x') # 第三行
 
 Label(wd).pack(fill='x') # 用于排版的空标签
 
-row3.pack(fill='x') # 第三行
 pdfs_quantity = StringVar()
 count_lb = Label(row3, textvariable=pdfs_quantity, font=('Arial', font_size))
 count_lb.pack()
 
-Label(wd).pack(fill='x') # 用于排版的空标签
 Label(wd).pack(fill='x') # 用于排版的空标签
 
 row4 = Frame(info_fr)
 row4.pack(fill='x') # 第四行
 
 Label(wd).pack(fill='x') # 用于排版的空标签
-Label(wd).pack(fill='x') # 用于排版的空标签
+
+row5 = Frame(info_fr)
+row5.pack(fill='x') # 第五行
+
 Label(wd).pack(fill='x') # 用于排版的空标签
 Label(wd).pack(fill='x') # 用于排版的空标签
 
 def mg_them():
     global PDFS_PATH
-    pdfs_qt = 0
+    pdf_count = 0
     make_bt['state'] = 'disabled'
-    for f in listdir(PDFS_PATH):
+    for f in listdir(PDFS_PATH): # 把指定文件夹中所有pdf文件复制到data文件夹里
         if f.split('.')[-1] == 'pdf':
             copy2(PDFS_PATH+'/'+f, data_path)
-    for f in listdir(PDFS_PATH):
+    pdfs_list = listdir(data_path)
+    chdir(data_path)
+    for f in pdfs_list: # 按已排列表给所有pdf文档重命名
         if f.split('.')[-1] == 'pdf':
-            pdfs_qt += 1
-            if len(f.split('_')) > 1:
+            if len(f.split('_')) > 1: # 去掉原文件名中所有下划线
                 new_name = []
                 new = ''
                 for u in f.split('_'):
                     new_name.append(u)
                 new = new.join(new_name)
-            chdir(data_path)
-            rename(f, f'{pdfs_qt}_{new}')
-    copy2(DOC, data_path)
-    chdir(data_path)
-    doc_name = DOC.split('/')[-1]
-    full_name = f'{data_path}/{doc_name}'
-    doc2pdf(full_name, f'{data_path}/0_{doc_name.split(".")[-2]}.pdf')
-    merge(data_path)
+                print(f'f{f}\nnew{new}') # test
+                rename(f, new)
+                pdfs_list[pdf_count] = new
+        for b in BLOCKS_LIST:
+            if f"{b.split('_')[2]}.pdf" == pdfs_list[pdf_count]:
+                rename(pdfs_list[pdf_count], f"{b.split('block_')[1]}.pdf")
+        pdf_count += 1
+    if DOC != '':
+        copy2(DOC, data_path)
+        chdir(data_path)
+        doc_name = DOC.split('/')[-1]
+        full_name = f'{data_path}/{doc_name}'
+        doc2pdf(full_name, f'{data_path}/0_{doc_name.split(".")[-2]}.pdf')
+    else:
+        with_doc = False
+    merge(data_path, with_doc)
     save_name = filedialog.asksaveasfilename(title='标书另存为', defaultextension='.pdf', initialfile='整合版文档名称', filetypes=[('PDF','*.pdf')])
     new_file_name = save_name.split('/')[-1]
     save_path = save_name.split(new_file_name)[-2]
     copy2(data_path+'merged_file.pdf', save_path)
     chdir(save_path)
     rename('merged_file.pdf', new_file_name)
+    with open(f'目录——{new_file_name}.txt', 'a') as f:
+        for i in range(len(BLOCKS_LIST)):
+            f.write(BLOCKS_LIST[i])
+            f.write('\n')
     for f in listdir(data_path):
         if f != 'settings.json':
             remove(data_path+f)
-    make_bt['state'] = 'normal'
+    wd.destroy()
 make_bt = Button(wd, text='  设置完毕，生成标书  ', command=mg_them, font=('Arial', font_size*2))
 make_bt.pack()
 
